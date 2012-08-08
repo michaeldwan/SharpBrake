@@ -3,9 +3,8 @@ using System.Configuration;
 using System.IO;
 using System.Net;
 using System.Text;
-
+using System.Collections.Generic;
 using Common.Logging;
-
 using SharpBrake.Serialization;
 
 namespace SharpBrake
@@ -43,14 +42,33 @@ namespace SharpBrake
         public void Send(Exception exception)
         {
             AirbrakeNotice notice = this.builder.Notice(exception);
-
-            //TODO: set up request, session and server headers
-            // Why would that be necessary, it's set in Send(AirbrakeNotice), isn't it? - @asbjornu
-
-            // Send the notice
             Send(notice);
         }
 
+        /// <summary>
+        /// Sends the specified exception to Airbrake.
+        /// </summary>
+        /// <param name="exception">The exception.</param>
+        /// <param name="parameters">Additional info.</param>
+        public void Send(Exception exception, Dictionary<string, string> parameters)
+        {
+            AirbrakeNotice notice = this.builder.Notice(exception);
+            if (parameters != null)
+            {
+                List<AirbrakeVar> p = null;
+                
+                if (notice.Request.Params != null)
+                    p = new List<AirbrakeVar>(notice.Request.Params);
+                else
+                    p = new List<AirbrakeVar>();
+
+                foreach (KeyValuePair<String, String> entry in parameters)
+                    p.Add(new AirbrakeVar(entry.Key, entry.Value));
+
+                notice.Request.Params = p.ToArray();
+            }
+           Send(notice);
+        }
 
         /// <summary>
         /// Sends the specified notice to Airbrake.

@@ -4,11 +4,7 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
-using System.Web;
-using System.Web.SessionState;
-
 using Common.Logging;
-
 using SharpBrake.Serialization;
 
 namespace SharpBrake
@@ -65,7 +61,7 @@ namespace SharpBrake
                 return this.notifier ?? (this.notifier = new AirbrakeNotifier
                 {
                     Name = "SharpBrake",
-                    Url = "https://github.com/asbjornu/SharpBrake",
+                    Url = "https://github.com/michaeldwan/SharpBrake",
                     Version = typeof(AirbrakeNotice).Assembly.GetName().Version.ToString()
                 });
             }
@@ -197,38 +193,7 @@ namespace SharpBrake
 
             var parameters = new List<AirbrakeVar>();
             var session = new List<AirbrakeVar>();
-            var httpContext = HttpContext.Current;
-
-            if (httpContext != null)
-            {
-                var httpRequest = httpContext.Request;
-                request.Url = httpRequest.Url.ToString();
-
-                cgiData.AddRange(BuildVars(httpRequest.Headers));
-                cgiData.AddRange(BuildVars(httpRequest.Cookies));
-                parameters.AddRange(BuildVars(httpRequest.Params));
-                session.AddRange(BuildVars(httpContext.Session));
-
-                if (httpContext.User != null)
-                    cgiData.Add(new AirbrakeVar("User.Identity.Name", httpContext.User.Identity.Name));
-
-                var browser = httpRequest.Browser;
-
-                if (browser != null)
-                {
-                    cgiData.Add(new AirbrakeVar("Browser.Browser", browser.Browser));
-                    cgiData.Add(new AirbrakeVar("Browser.ClrVersion", browser.ClrVersion));
-                    cgiData.Add(new AirbrakeVar("Browser.Cookies", browser.Cookies));
-                    cgiData.Add(new AirbrakeVar("Browser.Crawler", browser.Crawler));
-                    cgiData.Add(new AirbrakeVar("Browser.EcmaScriptVersion", browser.EcmaScriptVersion));
-                    cgiData.Add(new AirbrakeVar("Browser.JavaApplets", browser.JavaApplets));
-                    cgiData.Add(new AirbrakeVar("Browser.MajorVersion", browser.MajorVersion));
-                    cgiData.Add(new AirbrakeVar("Browser.MinorVersion", browser.MinorVersion));
-                    cgiData.Add(new AirbrakeVar("Browser.Platform", browser.Platform));
-                    cgiData.Add(new AirbrakeVar("Browser.W3CDomVersion", browser.W3CDomVersion));
-                }
-            }
-
+ 
             request.CgiData = cgiData.ToArray();
             request.Params = parameters.Any() ? parameters.ToArray() : null;
             request.Session = session.Any() ? session.ToArray() : null;
@@ -298,24 +263,6 @@ namespace SharpBrake
             return lines.ToArray();
         }
 
-
-        private IEnumerable<AirbrakeVar> BuildVars(HttpCookieCollection cookies)
-        {
-            if ((cookies == null) || (cookies.Count == 0))
-            {
-                this.log.Debug(f => f("No cookies to build vars from."));
-                return new AirbrakeVar[0];
-            }
-
-            return from key in cookies.Keys.Cast<string>()
-                   where !String.IsNullOrEmpty(key)
-                   let cookie = cookies[key]
-                   let value = cookie != null ? cookie.Value : null
-                   where !String.IsNullOrEmpty(value)
-                   select new AirbrakeVar(key, value);
-        }
-
-
         private IEnumerable<AirbrakeVar> BuildVars(NameValueCollection formData)
         {
             if ((formData == null) || (formData.Count == 0))
@@ -327,23 +274,6 @@ namespace SharpBrake
             return from key in formData.AllKeys
                    where !String.IsNullOrEmpty(key)
                    let value = formData[key]
-                   where !String.IsNullOrEmpty(value)
-                   select new AirbrakeVar(key, value);
-        }
-
-
-        private IEnumerable<AirbrakeVar> BuildVars(HttpSessionState session)
-        {
-            if ((session == null) || (session.Count == 0))
-            {
-                this.log.Debug(f => f("No session to build vars from."));
-                return new AirbrakeVar[0];
-            }
-
-            return from key in session.Keys.Cast<string>()
-                   where !String.IsNullOrEmpty(key)
-                   let v = session[key]
-                   let value = v != null ? v.ToString() : null
                    where !String.IsNullOrEmpty(value)
                    select new AirbrakeVar(key, value);
         }
